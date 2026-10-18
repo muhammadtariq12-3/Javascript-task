@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Products App</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+  background: #eaeaea;
+}
+
+/* Header */
+.header {
+  background: linear-gradient(90deg, #4facfe, #00f2fe);
+  padding: 20px;
+  color: white;
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.controls input, .controls select {
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+}
+
+.controls button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.filter { background: orange; color: white; }
+.delete { background: red; color: white; }
+.add { background: green; color: white; }
+
+/* Cards */
+.container {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  padding: 20px;
+}
+
+.card {
+  background: linear-gradient(145deg, #0f2027, #203a43);
+  color: white;
+  padding: 15px;
+  border-radius: 15px;
+}
+
+.price { color: #00ff9c; }
+
+/* Modal */
+#modal {
+  display: none;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+}
+
+#modalContent {
+  background: white;
+  width: 300px;
+  margin: 10% auto;
+  padding: 20px;
+  border-radius: 10px;
+}
+
+#modalContent input {
+  width: 100%;
+  margin: 5px 0;
+  padding: 8px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+  <h2>Products (<span id="count">0</span>)</h2>
+
+  <div class="controls">
+    <!-- 🔍 Search -->
+    <input type="text" id="search" placeholder="🔍 Search product">
+
+    <!-- Price -->
+    <input type="text" id="min" placeholder="Min Price">
+    <input type="text" id="max" placeholder="Max Price">
+
+    <!-- Sort -->
+    <select id="sort">
+      <option value="">Sort</option>
+      <option value="low">Low → High</option>
+      <option value="high">High → Low</option>
+    </select>
+
+    <!-- 🔥 Filter Button -->
+    <button class="filter" onclick="applyFilter()">Filter</button>
+
+    <!-- Select All -->
+    <label>
+      <input type="checkbox" id="selectAll"> Select All
+    </label>
+
+    <button class="delete" onclick="deleteSelected()">Delete</button>
+    <button class="add" onclick="openModal()">+ Add Product</button>
+  </div>
+</div>
+
+<div class="container" id="container"></div>
+
+<!-- Modal -->
+<div id="modal">
+  <div id="modalContent">
+    <h3>Add Product</h3>
+
+    <input type="text" id="name" placeholder="Product Name">
+    <input type="number" id="price" placeholder="Price (1000-50000)">
+    <input type="text" id="desc" placeholder="Description">
+
+    <button onclick="createProduct()">Create</button>
+    <button onclick="closeModal()" style="background:gray;">Cancel</button>
+  </div>
+</div>
+
+<script>
+let selected = [];
+
+let productNames = [
+"Laptop","Mobile","Headphones","Keyboard","Mouse",
+"Monitor","Tablet","Smart Watch","Speaker","Camera",
+"Shoes","T-Shirt","Jeans","Jacket","Sunglasses",
+"Backpack","Watch","Sneakers","Chair","Table",
+"Fan","AC","Refrigerator","Washing Machine","Iron",
+"Printer","Router","Power Bank","Charger","Microphone"
+];
+
+let products = productNames.map((name, index) => ({
+  id: index + 1,
+  name,
+  price: Math.floor(Math.random() * (50000 - 1000 + 1)) + 1000,
+  desc: "This is " + name
+}));
+
+let container = document.getElementById("container");
+let count = document.getElementById("count");
+let modal = document.getElementById("modal");
+
+/* Render */
+function render(data = products){
+  container.innerHTML = "";
+
+  if(data.length === 0){
+    container.innerHTML = `
+      <div style="grid-column: span 4; text-align:center; padding:50px;">
+        ❌ This product is not available
+      </div>
+    `;
+    count.innerText = 0;
+    return;
+  }
+
+  data.forEach(p=>{
+    let card = document.createElement("div");
+    card.className = "card";
+
+    card.innerHTML = `
+      <input type="checkbox" data-id="${p.id}">
+      <h3>${p.name}</h3>
+      <p class="price">Price: $${p.price}</p>
+      <p>${p.desc}</p>
+    `;
+
+    card.querySelector("input").addEventListener("change",(e)=>{
+      let id = Number(e.target.dataset.id);
+
+      if(e.target.checked){
+        if(!selected.includes(id)) selected.push(id);
+      } else {
+        selected = selected.filter(x => x !== id);
+      }
+    });
+
+    container.appendChild(card);
+  });
+
+  count.innerText = data.length;
+}
+
+render();
+
+/* 🔥 FILTER (Search + Min + Max + Sort) */
+function applyFilter(){
+  let search = document.getElementById("search").value.toLowerCase();
+  let minInput = document.getElementById("min").value;
+  let maxInput = document.getElementById("max").value;
+  let sort = document.getElementById("sort").value;
+
+  // ❌ validation
+  // if((minInput && isNaN(minInput)) || (maxInput && isNaN(maxInput))){
+  //   alert("Only numbers allowed in price");
+  //   return;
+  // }
+
+  // let min = Number(minInput);
+  // let max = Number(maxInput);
+
+  // if((min && (min < 1000 || min > 50000)) ||
+  //    (max && (max < 1000 || max > 50000))){
+  //   alert("Price must be between 1000 and 50000");
+  //   return;
+  // }
+
+  // let result = products.filter(p =>
+  //   p.name.toLowerCase().includes(search) &&
+  //   (min ? p.price >= min : true) &&
+  //   (max ? p.price <= max : true)
+  // );
+
+
+  let priceInput = document.getElementById("price");
+let priceError = document.getElementById("priceError");
+
+priceInput.addEventListener("input", function(){
+  let value = priceInput.value;
+
+  if(value === "" || isNaN(value)){
+    priceError.innerText = "❌ Only numbers allowed";
+    priceError.style.display = "block";
+  }
+  else if(value < 1000 || value > 50000){
+    priceError.innerText = "❌ Price must be 1000–50000";
+    priceError.style.display = "block";
+  }
+  else{
+    priceError.style.display = "none";
+  }
+});
+
+  // 🔽 sorting
+  if(sort === "low"){
+    result.sort((a,b)=>a.price-b.price);
+  } else if(sort === "high"){
+    result.sort((a,b)=>b.price-a.price);
+  }
+
+  render(result);
+}
+
+/* Delete */
+function deleteSelected(){
+  products = products.filter(p => !selected.includes(p.id));
+  selected = [];
+  render();
+}
+
+/* Select All */
+document.getElementById("selectAll").addEventListener("change",function(e){
+  selected = [];
+  document.querySelectorAll("#container input").forEach(cb=>{
+    cb.checked = e.target.checked;
+    if(e.target.checked){
+      selected.push(Number(cb.dataset.id));
+    }
+  });
+});
+
+/* Modal */
+function openModal(){ modal.style.display = "block"; }
+function closeModal(){ modal.style.display = "none"; }
+
+/* Add Product */
+function createProduct(){
+  let name = document.getElementById("name").value.trim();
+  let price = Number(document.getElementById("price").value);
+  let desc = document.getElementById("desc").value.trim();
+
+  if(!name || !price || !desc){
+    alert("All fields required");
+    return;
+  }
+
+  if(price < 1000 || price > 50000){
+    alert("Price must be between 1000 and 50000");
+    return;
+  }
+
+  products.unshift({
+    id: Date.now(),
+    name,
+    price,
+    desc
+  });
+
+  render();
+  closeModal();
+
+  document.getElementById("name").value = "";
+  document.getElementById("price").value = "";
+  document.getElementById("desc").value = "";
+}
+</script>
+
+</body>
+</html>
